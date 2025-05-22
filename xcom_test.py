@@ -102,4 +102,6 @@ with DAG(
         python_callable=_receive_xcom_manual,
     )
 
-    [generate_xcom_auto_task, generate_xcom_manual_task] >> [receive_xcom_auto_task, receive_xcom_manual_task]
+for upstream_task in [generate_xcom_auto_task, generate_xcom_manual_task]:
+    for downstream_task in [receive_xcom_auto_task, receive_xcom_manual_task]:
+        upstream_task >> downstream_task
