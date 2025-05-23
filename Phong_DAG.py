@@ -4,7 +4,7 @@ from datetime import datetime
 
 # Định nghĩa DAG
 with DAG(
-    dag_id='Phong_DAG_v2',
+    dag_id='Phong_DAG',
     start_date=datetime(2023, 1, 1),
     schedule='@daily',    
     catchup=False,        
