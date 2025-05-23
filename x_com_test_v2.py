@@ -5,7 +5,6 @@ from airflow import DAG
 from airflow.example_dags.libs.helper import print_stuff
 from airflow.operators.python import PythonOperator
 from airflow.settings import AIRFLOW_HOME
-from airflow.utils.dates import days_ago
 
 default_args = {
     'owner': 'airflow',
