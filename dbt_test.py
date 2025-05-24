@@ -70,8 +70,8 @@ with DAG(
         volumes=[dbt_project_volume, dbt_profiles_volume],
         volume_mounts=[dbt_project_volume_mount, dbt_profiles_volume_mount],
         init_containers=[dbt_git_sync_init_container],
-        do_xcom_push=False,
-        is_delete_operator_pod=True,
+        do_xcom_push=True,
+        is_delete_operator_pod=False,
         # THAY ĐỔI QUAN TRỌNG NHẤT: Đổi 'resources' thành 'container_resources'
         container_resources=k8s.V1ResourceRequirements(
             requests=DBT_RESOURCE_REQUESTS,
@@ -98,8 +98,8 @@ with DAG(
         volumes=[dbt_project_volume, dbt_profiles_volume],
         volume_mounts=[dbt_project_volume_mount, dbt_profiles_volume_mount],
         init_containers=[dbt_git_sync_init_container],
-        do_xcom_push=False,
-        is_delete_operator_pod=True,
+        do_xcom_push=True,
+        is_delete_operator_pod=False,
         # THAY ĐỔI QUAN TRỌNG NHẤT: Đổi 'resources' thành 'container_resources'
         container_resources=k8s.V1ResourceRequirements(
             requests={"cpu": "100m", "memory": "256Mi"},
