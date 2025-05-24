@@ -11,7 +11,7 @@ def task_with_error():
 with DAG(
     dag_id='Phong_DAG_Error',
     start_date=datetime(2024, 1, 1),
-    schedule_interval=None,
+    schedule=None,
     catchup=False,
     tags=["example"]
 ) as dag:
