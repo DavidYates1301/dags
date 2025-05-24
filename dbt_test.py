@@ -5,14 +5,15 @@ from datetime import datetime, timedelta
 
 # --- Cấu hình Chung cho dbt Project và Git-Sync ---
 # Thay thế các giá trị này bằng thông tin thực tế của bạn
-DBT_REPO_URL = "https://github.com/DavidYates1301/dbt_project.git"  # <--- THAY THẾ BẰNG URL REPO GIT CỦA DBT PROJECT CỦA BẠN
-DBT_REPO_BRANCH = "main"                                     # <--- THAY THẾ NẾU BẠN DÙNG BRANCH KHÁC (VD: 'dev', 'release')
-DBT_PROJECT_CLONE_PATH = "/dbt"                              # Đường dẫn nơi dbt project sẽ được clone trong Pod
-DBT_PROFILES_MOUNT_PATH = "/opt/airflow/dbt_profiles"        # Đường dẫn nơi profiles.yml sẽ được mount từ Secret
-DBT_PROFILE_NAME = "dbt_scheduler"                          # Tên profile bạn đã định nghĩa trong profiles.yml
-DBT_RUNNER_IMAGE = "192.168.1.67:9082/dbt-runner:1.7.0"         # <--- THAY THẾ BẰNG ĐỊA CHỈ DOCKER IMAGE DBT CỦA BẠN
-K8S_NAMESPACE = "cd-scheduler"                                    # Namespace nơi Airflow và các tài nguyên Kubernetes của bạn chạy
+DBT_REPO_URL = "https://github.com/DavidYates1301/dbt_project.git"
+DBT_REPO_BRANCH = "main"
+DBT_PROJECT_CLONE_PATH = "/dbt"
+DBT_PROFILES_MOUNT_PATH = "/opt/airflow/dbt_profiles"
+DBT_PROFILE_NAME = "dbt_scheduler"
+DBT_RUNNER_IMAGE = "192.168.1.67:9082/dbt-runner:1.7.0"
+K8S_NAMESPACE = "cd-scheduler"
 
+# Cấu hình tài nguyên khuyến nghị cho Pod dbt (sử dụng Python dictionary)
 DBT_RESOURCE_REQUESTS = {"cpu": "200m", "memory": "512Mi"}
 DBT_RESOURCE_LIMITS = {"cpu": "1000m", "memory": "2Gi"}
 
@@ -20,6 +21,7 @@ DBT_RESOURCE_LIMITS = {"cpu": "1000m", "memory": "2Gi"}
 with DAG(
     dag_id='dbt_postgres_kubernetes_example',
     start_date=datetime(2023, 1, 1), # Ngày bắt đầu lịch sử cho DAG
+    # Sửa lỗi: Thay 'schedule' thành 'schedule_interval'
     schedule=timedelta(days=1), # Chạy mỗi ngày (hoặc None nếu bạn muốn chạy thủ công)
     catchup=False, # Không chạy lại các lượt chạy đã bỏ lỡ
     tags=['dbt', 'kubernetes', 'postgres', 'data_transformation'],
@@ -27,7 +29,7 @@ with DAG(
 ) as dag:
 
     # 1. Định nghĩa Volume chung cho dbt project
-    #    EmptyDir volume: Dữ liệu tồn tại trong suốt vòng đời của Pod và bị xóa khi Pod kết thúc.
+    # EmptyDir volume: Dữ liệu tồn tại trong suốt vòng đời của Pod và bị xóa khi Pod kết thúc.
     dbt_project_volume = k8s.V1Volume(name="dbt-project-volume", empty_dir=k8s.V1EmptyDirVolumeSource())
     # Định nghĩa VolumeMount cho dbt project
     dbt_project_volume_mount = k8s.V1VolumeMount(name="dbt-project-volume", mount_path=DBT_PROJECT_CLONE_PATH)
@@ -45,7 +47,7 @@ with DAG(
     )
 
     # 3. Định nghĩa Init Container cho Git-Sync
-    #    Container này sẽ chạy trước container chính của task để clone dbt project.
+    # Container này sẽ chạy trước container chính của task để clone dbt project.
     dbt_git_sync_init_container = k8s.V1Container(
         name="git-sync-dbt-project",
         image="registry.k8s.io/git-sync/git-sync:v4.4.0", # Sử dụng phiên bản git-sync ổn định
@@ -80,10 +82,11 @@ with DAG(
         init_containers=[dbt_git_sync_init_container],          # Gắn init container vào đây
         do_xcom_push=False,      # Đặt là False nếu bạn không cần truyền dữ liệu giữa các task qua XComs
         is_delete_operator_pod=True, # Đảm bảo Pod bị xóa sau khi task hoàn thành để tiết kiệm tài nguyên
-        resources=k8s.V1ResourceRequirements(
-            requests=DBT_RESOURCE_REQUESTS,
-            limits=DBT_RESOURCE_LIMITS
-        ),
+        # Sửa lỗi: Tham số 'resources' cần là một dictionary
+        resources={
+            "requests": DBT_RESOURCE_REQUESTS,
+            "limits": DBT_RESOURCE_LIMITS
+        },
         # Nếu bạn dùng Workload Identity hoặc Service Account để cấp quyền database
         # service_account_name="your-kubernetes-service-account-for-dbt",
     )
@@ -107,10 +110,11 @@ with DAG(
         init_containers=[dbt_git_sync_init_container], # Cũng cần init container cho task test
         do_xcom_push=False,
         is_delete_operator_pod=True,
-        resources=k8s.V1ResourceRequirements(
-            requests={"cpu": "100m", "memory": "256Mi"}, # Test thường ít tài nguyên hơn run
-            limits={"cpu": "500m", "memory": "1Gi"}
-        ),
+        # Sửa lỗi: Tham số 'resources' cần là một dictionary
+        resources={
+            "requests": {"cpu": "100m", "memory": "256Mi"}, # Test thường ít tài nguyên hơn run
+            "limits": {"cpu": "500m", "memory": "1Gi"}
+        },
         # service_account_name="your-kubernetes-service-account-for-dbt",
     )
 
