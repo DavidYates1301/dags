@@ -11,6 +11,7 @@ DBT_PROFILES_MOUNT_PATH = "/opt/airflow/dbt_profiles"
 DBT_PROFILE_NAME = "dbt_scheduler"
 DBT_RUNNER_IMAGE = "192.168.1.67:9082/dbt-runner:1.7.0"
 K8S_NAMESPACE = "cd-scheduler"
+DBT_IMAGE_PULL_SECRET = "nexus-pull-secret" 
 
 # Cấu hình tài nguyên (sẽ được dùng để tạo đối tượng V1ResourceRequirements)
 DBT_RESOURCE_REQUESTS = {"cpu": "200m", "memory": "512Mi"}
@@ -76,6 +77,7 @@ with DAG(
             requests=DBT_RESOURCE_REQUESTS,
             limits=DBT_RESOURCE_LIMITS
         ),
+        image_pull_secrets=[k8s.V1LocalObjectReference(name=DBT_IMAGE_PULL_SECRET)],
         # service_account_name="your-kubernetes-service-account-for-dbt",
     )
 
@@ -103,6 +105,7 @@ with DAG(
             requests={"cpu": "100m", "memory": "256Mi"},
             limits={"cpu": "500m", "memory": "1Gi"}
         ),
+        image_pull_secrets=[k8s.V1LocalObjectReference(name=DBT_IMAGE_PULL_SECRET)],
         # service_account_name="your-kubernetes-service-account-for-dbt",
     )
 
