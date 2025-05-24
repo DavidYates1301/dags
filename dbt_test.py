@@ -20,7 +20,7 @@ DBT_RESOURCE_LIMITS = {"cpu": "1000m", "memory": "2Gi"}
 with DAG(
     dag_id='dbt_postgres_kubernetes_example',
     start_date=datetime(2023, 1, 1),
-    schedule_interval=timedelta(days=1), # Giữ nguyên 'schedule_interval'
+    schedule=timedelta(days=1), # Giữ nguyên 'schedule_interval'
     catchup=False,
     tags=['dbt', 'kubernetes', 'postgres', 'data_transformation'],
     description='A DAG to run dbt transformations for PostgreSQL jobs data on Kubernetes.',
