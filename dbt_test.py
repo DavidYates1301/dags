@@ -12,6 +12,7 @@ DBT_PROFILE_NAME = "dbt_scheduler"
 DBT_IMAGE = "192.168.1.67:9082/dbt-runner:1.7.0-v3"
 K8S_NAMESPACE = "cd-scheduler"
 DBT_IMAGE_PULL_SECRET = "nexus-pull-secret"
+DBT_PROJECT_PVC_NAME = "dbt-project-pvc"
 
 default_args = {
     "owner": "airflow",
@@ -31,9 +32,19 @@ with DAG(
 ) as dag:
 
     # Shared Volumes
-    dbt_project_volume = k8s.V1Volume(name="dbt-project-volume", empty_dir=k8s.V1EmptyDirVolumeSource())
-    dbt_project_mount = k8s.V1VolumeMount(name="dbt-project-volume", mount_path="/opt/airflow/dbt")
+    # 1. Sử dụng PVC thay cho emptyDir
+    dbt_project_volume = k8s.V1Volume(
+        name="dbt-project-volume",
+        persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(
+            claim_name=DBT_PROJECT_PVC_NAME
+        )
+    )
+    dbt_project_mount = k8s.V1VolumeMount(
+        name="dbt-project-volume",
+        mount_path="/opt/airflow/dbt"
+    )
 
+    # 2. Volume secret cho dbt profiles
     dbt_profiles_volume = k8s.V1Volume(
         name="dbt-profiles-volume",
         secret=k8s.V1SecretVolumeSource(secret_name="dbt-profiles")
