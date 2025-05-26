@@ -9,7 +9,7 @@ DBT_REPO_BRANCH = "main"
 DBT_PROJECT_CLONE_PATH = "/dbt"
 DBT_PROFILES_MOUNT_PATH = "/opt/airflow/dbt_profiles"
 DBT_PROFILE_NAME = "dbt_scheduler"
-DBT_RUNNER_IMAGE = "192.168.1.67:9082/dbt-runner:1.7.0-v2"
+DBT_RUNNER_IMAGE = "192.168.1.67:9082/dbt-runner:1.7.0-v3"
 K8S_NAMESPACE = "cd-scheduler"
 DBT_IMAGE_PULL_SECRET = "nexus-pull-secret" 
 
