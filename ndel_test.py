@@ -14,13 +14,6 @@ with DAG(
     start_date=pendulum.datetime(2023, 1, 1, tz="UTC"),
     catchup=False,
     tags=["airbyte", "test"],
-    doc_md="""
-    ### Airbyte Connection Test DAG
-
-    This DAG uses the AirbyteTriggerSyncOperator to test the connection to Airbyte
-    and trigger a specific sync job. It leverages the Airflow Connection
-    configured with Client ID and Client Secret for authentication.
-    """,
 ) as dag:
     start_task = BashOperator(
         task_id="start_airbyte_test",
