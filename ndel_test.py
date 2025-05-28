@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pendulum
+from datetime import datetime, timedelta
 
 from airflow.models.dag import DAG
 from airflow.providers.airbyte.operators.airbyte import AirbyteTriggerSyncOperator
@@ -11,7 +11,7 @@ AIRBYTE_CONNECTION_ID = "ba78537a-fd02-4e98-8a8f-51f91672eee8"
 with DAG(
     dag_id="airbyte_connection_test_dag",
     schedule=None,
-    start_date=pendulum.datetime(2023, 1, 1, tz="UTC"),
+    start_date=datetime(2023, 1, 1),
     catchup=False,
     tags=["airbyte", "test"],
 ) as dag:
