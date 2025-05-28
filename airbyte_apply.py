@@ -1,13 +1,13 @@
 from airflow import DAG
-from airflow.utils.dates import days_ago
 from airflow.providers.airbyte.operators.airbyte import AirbyteTriggerSyncOperator
 from airflow.providers.airbyte.sensors.airbyte import AirbyteJobSensor
+from datetime import datetime, timedelta
 
 # Khởi tạo DAG
 with DAG(
     dag_id='airbyte_sync',
-    start_date=days_ago(1),
-    schedule=None,  # Chạy thủ công hoặc trigger qua API Airflow
+    start_date=datetime(2023, 1, 1),
+    schedule=timedelta(days=1),  # Chạy thủ công hoặc trigger qua API Airflow
     catchup=False
 ) as dag:
     # Task 1: Kích hoạt job Airbyte (async)
