@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 with DAG(
     dag_id='airbyte_sync',
     start_date=datetime(2023, 1, 1),
-    schedule=timedelta(days=1),  # Chạy thủ công hoặc trigger qua API Airflow
+    schedule=None,  # Chạy thủ công hoặc trigger qua API Airflow
     catchup=False
 ) as dag:
     # Task 1: Kích hoạt job Airbyte (async)
