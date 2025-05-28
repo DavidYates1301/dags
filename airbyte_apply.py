@@ -13,14 +13,14 @@ with DAG(
     # Task 1: Kích hoạt job Airbyte (async)
     trigger_sync = AirbyteTriggerSyncOperator(
         task_id='trigger_airbyte_sync',
-        airbyte_conn_id='ndel_con',              # kết nối HTTP đã cấu hình
+        airbyte_conn_id='airbyte_default',              # kết nối HTTP đã cấu hình
         connection_id='ba78537a-fd02-4e98-8a8f-51f91672eee8', # ID Connection Airbyte
         asynchronous=True                                    # chỉ trigger, không đợi ở đây
     )
     # Task 2: Sensor theo dõi job Airbyte đến khi hoàn tất
     wait_for_sync = AirbyteJobSensor(
         task_id='wait_for_airbyte_sync',
-        airbyte_conn_id='ndel_con',
+        airbyte_conn_id='airbyte_default',
         airbyte_job_id=trigger_sync.output                   # lấy job_id từ task trước
     )
     trigger_sync >> wait_for_sync
