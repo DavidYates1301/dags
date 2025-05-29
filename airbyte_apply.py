@@ -15,6 +15,6 @@ with DAG(
         task_id='trigger_airbyte_sync',
         airbyte_conn_id='airbyte_conn',              # kết nối HTTP đã cấu hình
         connection_id='ba78537a-fd02-4e98-8a8f-51f91672eee8', # ID Connection Airbyte
-        asynchronous=False                                    # chỉ trigger, không đợi ở đây
+        asynchronous=False                                    
     )
     trigger_sync 
