@@ -14,6 +14,8 @@ PARTITION_VALUES = [str(i) for i in range(1, 9)]  # ['1','2',...,'8']
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
+    "retries": 2,
+    "retry_delay": timedelta(seconds=2),
 }
 
 @task
