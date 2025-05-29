@@ -26,7 +26,6 @@ def create_destination_table():
     SELECT * FROM {SOURCE_SCHEMA}.{TABLE_NAME} WHERE 1=0
     """
     hook.run(sql)
-    print(f"Table {DEST_SCHEMA}.{TABLE_NAME} created or already exists.")
 
 @task
 def copy_partition(loaigiayto_value: str):
@@ -38,7 +37,6 @@ def copy_partition(loaigiayto_value: str):
     WHERE {PARTITION_FIELD} = '{loaigiayto_value}'
     """
     hook.run(sql_insert)
-    print(f"Copied partition loaigiayto={loaigiayto_value} from {SOURCE_SCHEMA} to {DEST_SCHEMA}.")
 
 with DAG(
     dag_id="trino_copy_partitioned_by_loaigiayto_no_delete",
