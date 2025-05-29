@@ -4,7 +4,7 @@ from airflow.decorators import task
 from datetime import datetime, timedelta
 
 SOURCE_CONN_ID = "trino_default"
-CATALOG = "ndc-common-zone-masterdata"  # Catalog trong Trino
+CATALOG = "ndc_common_zone_masterdata"  # Catalog trong Trino
 SOURCE_SCHEMA = "masterdata"
 DEST_SCHEMA = "destination"
 TABLE_NAME = "giay_to_dinh_danh_cn"
