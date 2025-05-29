@@ -49,7 +49,7 @@ with DAG(
     dag_id="trino_distributed_data_copy",
     default_args=default_args,
     start_date=datetime(2023, 1, 1),
-    schedule_interval="@daily",
+    schedule=None,
     catchup=False,
     max_active_tasks=10,
 ) as dag:
