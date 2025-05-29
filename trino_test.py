@@ -4,7 +4,7 @@ from airflow.decorators import task
 from datetime import datetime, timedelta
 
 SOURCE_CONN_ID = "trino_default"
-DATABASE = "ndc-common-zone-masterdata"  # Thay bằng tên database chứa 2 schema
+CATALOG = "ndc-common-zone-masterdata"  # Catalog trong Trino
 SOURCE_SCHEMA = "masterdata"
 DEST_SCHEMA = "destination"
 TABLE_NAME = "giay_to_dinh_danh_cn"
@@ -20,21 +20,22 @@ default_args = {
 def create_destination_table():
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
     sql = f"""
-    CREATE TABLE IF NOT EXISTS {DEST_SCHEMA}.{TABLE_NAME} AS
-    SELECT * FROM {SOURCE_SCHEMA}.{TABLE_NAME} WHERE 1=0
+    CREATE TABLE IF NOT EXISTS {CATALOG}.{DEST_SCHEMA}.{TABLE_NAME} AS
+    SELECT * FROM {CATALOG}.{SOURCE_SCHEMA}.{TABLE_NAME} WHERE 1=0
     """
     hook.run(sql)
+    print(f"Table {CATALOG}.{DEST_SCHEMA}.{TABLE_NAME} created or already exists.")
 
 @task
 def copy_partition(loaigiayto_value: str):
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
-
     sql_insert = f"""
-    INSERT INTO {DEST_SCHEMA}.{TABLE_NAME}
-    SELECT * FROM {SOURCE_SCHEMA}.{TABLE_NAME}
+    INSERT INTO {CATALOG}.{DEST_SCHEMA}.{TABLE_NAME}
+    SELECT * FROM {CATALOG}.{SOURCE_SCHEMA}.{TABLE_NAME}
     WHERE {PARTITION_FIELD} = '{loaigiayto_value}'
     """
     hook.run(sql_insert)
+    print(f"Copied partition loaigiayto={loaigiayto_value} from {CATALOG}.{SOURCE_SCHEMA} to {CATALOG}.{DEST_SCHEMA}.")
 
 with DAG(
     dag_id="trino_copy_partitioned_by_loaigiayto_no_delete",
