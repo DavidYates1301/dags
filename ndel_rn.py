@@ -65,7 +65,7 @@ def copy_batch(batch):
     print(f"Copied rows from {start_row} to {end_row}")
 
 with DAG(
-    dag_id="trino_copy_whole_table_in_batches",
+    dag_id="trino_copy_whole_table_in_batches_v2",
     default_args=default_args,
     start_date=datetime(2023, 1, 1),
     schedule=None,
