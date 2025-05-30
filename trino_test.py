@@ -34,7 +34,7 @@ def copy_partition(loaigiayto_value: str):
     sql_insert = f"""
     INSERT INTO {CATALOG}.{DEST_SCHEMA}.{TABLE_NAME}
     SELECT * FROM {CATALOG}.{SOURCE_SCHEMA}.{TABLE_NAME}
-    WHERE {PARTITION_FIELD} = '{loaigiayto_value}'
+    WHERE {PARTITION_FIELD} = '{loaigiayto_value}' LIMIT 1000
     """
     hook.run(sql_insert)
     print(f"Copied partition loaigiayto={loaigiayto_value} from {CATALOG}.{SOURCE_SCHEMA} to {CATALOG}.{DEST_SCHEMA}.")
