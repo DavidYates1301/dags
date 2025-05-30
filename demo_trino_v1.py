@@ -62,6 +62,7 @@ with DAG(
     schedule=None,
     catchup=False,
     max_active_tasks=5,
+    tags=["trino", "data-copy"]
 ) as dag:
 
     # ========== BẢNG PHÂN MẢNH ==========
@@ -79,7 +80,7 @@ with DAG(
                 copy_task = copy_partition.override(task_id=f"copy_{table}_{digit}")(
                     table, source_schema, partition_field, digit
                 )
-            create >> tg
+                create >> copy_task  # đảm bảo task copy phụ thuộc vào task create
 
     # ========== BẢNG KHÔNG PHÂN MẢNH ==========
     no_partition_tables = [
@@ -100,8 +101,3 @@ with DAG(
         create = create_table_if_not_exists.override(task_id=f"create_{table}")(table, source_schema)
         copy = copy_full_table.override(task_id=f"copy_{table}")(table, source_schema)
         create >> copy
-
-
-
-
-
