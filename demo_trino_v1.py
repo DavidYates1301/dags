@@ -34,9 +34,10 @@ def get_columns(hook: TrinoHook, schema: str, table: str) -> List[str]:
 
 def generate_merge_sql(hook: TrinoHook, source_schema: str, dest_schema: str, table: str, key: str, condition: str = None) -> str:
     columns = get_columns(hook, source_schema, table)
-    columns_str = ", ".join(columns)
-    update_set = ", ".join([f"{col} = source.{col}" for col in columns if col != key])
-    insert_values = ", ".join([f"source.{col}" for col in columns])
+    escaped_columns = [f'"{col}"' for col in columns]
+    columns_str = ", ".join(escaped_columns)
+    update_set = ", ".join([f'{col} = source.{col}' for col in escaped_columns if col.strip('"') != key])
+    insert_values = ", ".join([f"source.{col}" for col in escaped_columns])
     where_clause = f"WHERE {condition}" if condition else ""
 
     return f"""
@@ -44,7 +45,7 @@ def generate_merge_sql(hook: TrinoHook, source_schema: str, dest_schema: str, ta
     USING (
         SELECT * FROM {CATALOG}.{source_schema}.{table} {where_clause}
     ) AS source
-    ON target.{key} = source.{key}
+    ON target."{key}" = source."{key}"
     WHEN MATCHED THEN UPDATE SET {update_set}
     WHEN NOT MATCHED THEN INSERT ({columns_str}) VALUES ({insert_values})
     """
@@ -81,7 +82,6 @@ with DAG(
     tags=["trino", "data-merge"]
 ) as dag:
 
-    # ======== BẢNG PHÂN MẢNH ========
     partitioned_tables = {
         "diachi": ("matinh", NDC_VUNGTAPKET_BCA, "madddiadiem"),
         "giaytodinhdanhcn": ("sogiayto", NDC_VUNGTAPKET_BCA, "sogiayto"),
@@ -98,7 +98,6 @@ with DAG(
                 )
                 create >> merge_task
 
-    # ======== BẢNG KHÔNG PHÂN MẢNH ========
     no_partition_tables = [
         ("dm_dantoc", NDA_VUNGTAPKET_DANHMUC, "ma"),
         ("dm_giatrithithuc", NDA_VUNGTAPKET_DANHMUC, "ma"),
