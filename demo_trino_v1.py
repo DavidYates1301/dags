@@ -83,7 +83,7 @@ with DAG(
 
     # ======== BẢNG PHÂN MẢNH ========
     partitioned_tables = {
-        "diachi": ("matinh", NDC_VUNGTAPKET_BCA, "madiadiem"),
+        "diachi": ("matinh", NDC_VUNGTAPKET_BCA, "madddiadiem"),
         "giaytodinhdanhcn": ("sogiayto", NDC_VUNGTAPKET_BCA, "sogiayto"),
         "nguoivn": ("sodinhdanh", NDC_VUNGTAPKET_BCA, "sodinhdanh"),
     }
