@@ -6,6 +6,8 @@ from airflow.decorators import task
 from airflow.utils.task_group import TaskGroup
 from datetime import datetime, timedelta
 from typing import List
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+
 
 with DAG(
     dag_id='airbyte_sync_v2',
@@ -39,3 +41,12 @@ with DAG(
         asynchronous=False                                    
     )
     trigger_sync_task1 >>  trigger_sync_task2 >> trigger_sync_task3 >> trigger_sync_task4
+
+    trigger_trino_dag = TriggerDagRunOperator(
+        task_id='trigger_trino_copy_all_tables_partitioned',
+        trigger_dag_id='trino_copy_all_tables_partitioned',  
+        wait_for_completion=False,  
+        reset_dag_run=True,         
+    )
+
+    trigger_sync_task4 >> trigger_trino_dag
