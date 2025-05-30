@@ -8,7 +8,7 @@ from typing import List
 SOURCE_CONN_ID = "trino_default"
 CATALOG = "ndc"
 NDC_VUNGTAPKET_BCA = "ndc_vungtapket_bca"
-NDA_VUNGTAPKET_DANHMUC = "nda_vungtapket_danhmuc"
+NDA_VUNGTAPKET_DANHMUC = "ndc_vungtapket_danhmuc"
 DEST_SCHEMA = "ndc_vungdungchung_dancu"
 
 default_args = {
@@ -61,7 +61,7 @@ with DAG(
     start_date=datetime(2023, 1, 1),
     schedule=None,
     catchup=False,
-    max_active_tasks=5,
+    max_active_tasks=10,
     tags=["trino", "data-copy"]
 ) as dag:
 
