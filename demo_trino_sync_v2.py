@@ -46,7 +46,6 @@ def sync_partition(table: str, source_schema: str, dest_schema: str, partition_f
 
     condition = f"substr(trim(cast({partition_field} as varchar)), -1) = '{last_digit}'"
 
-    # Insert new rows
     insert_sql = f"""
     INSERT INTO {CATALOG}.{dest_schema}.{table}
     SELECT {columns_str}
@@ -57,15 +56,14 @@ def sync_partition(table: str, source_schema: str, dest_schema: str, partition_f
     )
     """
 
-    # Update existing rows (Trino does not support alias in UPDATE)
     update_sql = f"""
     UPDATE {CATALOG}.{dest_schema}.{table}
     SET {update_str}
-    FROM (
-        SELECT * FROM {CATALOG}.{source_schema}.{table}
+    WHERE "{key}" IN (
+        SELECT "{key}"
+        FROM {CATALOG}.{source_schema}.{table}
         WHERE {condition}
-    ) AS source
-    WHERE {CATALOG}.{dest_schema}.{table}."{key}" = source."{key}"
+    )
     """
 
     hook.run(update_sql)
@@ -90,8 +88,10 @@ def sync_full_table(table: str, source_schema: str, dest_schema: str, key: str):
     update_sql = f"""
     UPDATE {CATALOG}.{dest_schema}.{table}
     SET {update_str}
-    FROM {CATALOG}.{source_schema}.{table} AS source
-    WHERE {CATALOG}.{dest_schema}.{table}."{key}" = source."{key}"
+    WHERE "{key}" IN (
+        SELECT "{key}"
+        FROM {CATALOG}.{source_schema}.{table}
+    )
     """
 
     hook.run(update_sql)
@@ -113,8 +113,8 @@ with DAG(
     # ======== BẢNG PHÂN MẢNH ========
     partitioned_tables = {
         "diachi": ("matinh", NDC_VUNGTAPKET_BCA, "madddiadiem"),
-        "giaytodinhdanhcn": ("sogiayto", NDC_VUNGTAPKET_BCA, "sogiayto"),
-        "nguoivn": ("sodinhdanh", NDC_VUNGTAPKET_BCA, "sodinhdanh"),
+        # "giaytodinhdanhcn": ("sogiayto", NDC_VUNGTAPKET_BCA, "sogiayto"),
+        # "nguoivn": ("sodinhdanh", NDC_VUNGTAPKET_BCA, "sodinhdanh"),
     }
 
     for table, (partition_field, source_schema, key) in partitioned_tables.items():
@@ -130,16 +130,16 @@ with DAG(
     # ======== BẢNG KHÔNG PHÂN MẢNH ========
     no_partition_tables = [
         ("dm_dantoc", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_giatrithithuc", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_gioitinh", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_huyen", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_loaigiaytotuythan", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_loaigiaytoxnc", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_nhommau", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_quoctich", NDA_VUNGTAPKET_DANHMUC, "maquocgia"),
-        ("dm_tinh", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_tongiao", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_xa", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_giatrithithuc", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_gioitinh", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_huyen", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_loaigiaytotuythan", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_loaigiaytoxnc", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_nhommau", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_quoctich", NDA_VUNGTAPKET_DANHMUC, "maquocgia"),
+        # ("dm_tinh", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_tongiao", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_xa", NDA_VUNGTAPKET_DANHMUC, "ma"),
     ]
 
     for table, source_schema, key in no_partition_tables:
