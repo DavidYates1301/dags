@@ -22,6 +22,33 @@ default_args = {
 def get_partitions_last_digit() -> List[str]:
     return [str(i) for i in range(10)]
 
+def get_columns(hook: TrinoHook, schema: str, table: str) -> List[str]:
+    sql = f"""
+    SELECT column_name
+    FROM {CATALOG}.information_schema.columns
+    WHERE table_schema = '{schema}' AND table_name = '{table}'
+    ORDER BY ordinal_position
+    """
+    results = hook.get_records(sql)
+    return [row[0] for row in results]
+
+def generate_merge_sql(hook: TrinoHook, source_schema: str, dest_schema: str, table: str, key: str, condition: str = None) -> str:
+    columns = get_columns(hook, source_schema, table)
+    columns_str = ", ".join(columns)
+    update_set = ", ".join([f"{col} = source.{col}" for col in columns if col != key])
+    insert_values = ", ".join([f"source.{col}" for col in columns])
+    where_clause = f"WHERE {condition}" if condition else ""
+
+    return f"""
+    MERGE INTO {CATALOG}.{dest_schema}.{table} AS target
+    USING (
+        SELECT * FROM {CATALOG}.{source_schema}.{table} {where_clause}
+    ) AS source
+    ON target.{key} = source.{key}
+    WHEN MATCHED THEN UPDATE SET {update_set}
+    WHEN NOT MATCHED THEN INSERT ({columns_str}) VALUES ({insert_values})
+    """
+
 @task
 def create_table_if_not_exists(table_name: str, source_schema: str, dest_schema: str):
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
@@ -32,31 +59,16 @@ def create_table_if_not_exists(table_name: str, source_schema: str, dest_schema:
     hook.run(sql)
 
 @task
-def merge_partition(table: str, source_schema: str, dest_schema: str, partition_field: str, last_digit: str, unique_field: str):
+def merge_partition(table: str, source_schema: str, dest_schema: str, partition_field: str, last_digit: str, key: str):
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
     condition = f"substr(trim(cast({partition_field} as varchar)), -1) = '{last_digit}'"
-    
-    sql = f"""
-    MERGE INTO {CATALOG}.{dest_schema}.{table} AS target
-    USING (
-        SELECT * FROM {CATALOG}.{source_schema}.{table} WHERE {condition}
-    ) AS source
-    ON target.{unique_field} = source.{unique_field}
-    WHEN MATCHED THEN UPDATE SET *
-    WHEN NOT MATCHED THEN INSERT *;
-    """
+    sql = generate_merge_sql(hook, source_schema, dest_schema, table, key, condition)
     hook.run(sql)
 
 @task
-def merge_full_table(table: str, source_schema: str, dest_schema: str, unique_field: str):
+def merge_full_table(table: str, source_schema: str, dest_schema: str, key: str):
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
-    sql = f"""
-    MERGE INTO {CATALOG}.{dest_schema}.{table} AS target
-    USING {CATALOG}.{source_schema}.{table} AS source
-    ON target.{unique_field} = source.{unique_field}
-    WHEN MATCHED THEN UPDATE SET *
-    WHEN NOT MATCHED THEN INSERT *;
-    """
+    sql = generate_merge_sql(hook, source_schema, dest_schema, table, key)
     hook.run(sql)
 
 with DAG(
@@ -69,37 +81,39 @@ with DAG(
     tags=["trino", "data-merge"]
 ) as dag:
 
+    # ======== BẢNG PHÂN MẢNH ========
     partitioned_tables = {
-        "diachi": ("matinh", "madiadiem", NDC_VUNGTAPKET_BCA),
-        "giaytodinhdanhcn": ("sogiayto", "sogiayto", NDC_VUNGTAPKET_BCA),
-        "nguoivn": ("sodinhdanh", "sodinhdanh", NDC_VUNGTAPKET_BCA),
+        "diachi": ("matinh", NDC_VUNGTAPKET_BCA, "madiadiem"),
+        "giaytodinhdanhcn": ("sogiayto", NDC_VUNGTAPKET_BCA, "sogiayto"),
+        "nguoivn": ("sodinhdanh", NDC_VUNGTAPKET_BCA, "sodinhdanh"),
     }
 
-    for table, (partition_field, unique_field, source_schema) in partitioned_tables.items():
+    for table, (partition_field, source_schema, key) in partitioned_tables.items():
         create = create_table_if_not_exists.override(task_id=f"create_{table}")(table, source_schema, DEST_SCHEMA)
 
         for digit in get_partitions_last_digit():
             with TaskGroup(group_id=f"{table}_partition_{digit}") as tg:
                 merge_task = merge_partition.override(task_id=f"merge_{table}_{digit}")(
-                    table, source_schema, DEST_SCHEMA, partition_field, digit, unique_field
+                    table, source_schema, DEST_SCHEMA, partition_field, digit, key
                 )
                 create >> merge_task
 
+    # ======== BẢNG KHÔNG PHÂN MẢNH ========
     no_partition_tables = [
-        ("dm_dantoc", "ma"),
-        ("dm_giatrithithuc", "ma"),
-        ("dm_gioitinh", "ma"),
-        ("dm_huyen", "ma"),
-        ("dm_loaigiaytotuythan", "ma"),
-        ("dm_loaigiaytoxnc", "ma"),
-        ("dm_nhommau", "ma"),
-        ("dm_quoctich", "maquocgia"),
-        ("dm_tinh", "ma"),
-        ("dm_tongiao", "ma"),
-        ("dm_xa", "ma"),
+        ("dm_dantoc", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        ("dm_giatrithithuc", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        ("dm_gioitinh", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        ("dm_huyen", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        ("dm_loaigiaytotuythan", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        ("dm_loaigiaytoxnc", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        ("dm_nhommau", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        ("dm_quoctich", NDA_VUNGTAPKET_DANHMUC, "maquocgia"),
+        ("dm_tinh", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        ("dm_tongiao", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        ("dm_xa", NDA_VUNGTAPKET_DANHMUC, "ma"),
     ]
 
-    for table, unique_field in no_partition_tables:
-        create = create_table_if_not_exists.override(task_id=f"create_{table}")(table, NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC)
-        merge = merge_full_table.override(task_id=f"merge_{table}")(table, NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, unique_field)
+    for table, source_schema, key in no_partition_tables:
+        create = create_table_if_not_exists.override(task_id=f"create_{table}")(table, source_schema, VUNGDUNGCHUNG_DANHMUC)
+        merge = merge_full_table.override(task_id=f"merge_{table}")(table, source_schema, VUNGDUNGCHUNG_DANHMUC, key)
         create >> merge
