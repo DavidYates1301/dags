@@ -10,6 +10,7 @@ CATALOG = "ndc"
 NDC_VUNGTAPKET_BCA = "ndc_vungtapket_bca"
 NDA_VUNGTAPKET_DANHMUC = "ndc_vungtapket_danhmuc"
 DEST_SCHEMA = "ndc_vungdungchung_dancu"
+VUNGDUNGCHUNG_DANHMUC = "ndc_vungdungchung_danhmuc"
 
 default_args = {
     "owner": "airflow",
@@ -22,16 +23,16 @@ def get_partitions_last_digit() -> List[str]:
     return [str(i) for i in range(10)]
 
 @task
-def create_table_if_not_exists(table_name: str, source_schema: str):
+def create_table_if_not_exists(table_name: str, source_schema: str, dest_schema: str):
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
     sql = f"""
-    CREATE TABLE IF NOT EXISTS {CATALOG}.{DEST_SCHEMA}.{table_name} AS
+    CREATE TABLE IF NOT EXISTS {CATALOG}.{dest_schema}.{table_name} AS
     SELECT * FROM {CATALOG}.{source_schema}.{table_name} WHERE 1=0
     """
     hook.run(sql)
 
 @task
-def copy_partition(table: str, source_schema: str, partition_field: str, last_digit: str):
+def copy_partition(table: str, source_schema: str, dest_schema: str, partition_field: str, last_digit: str):
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
 
     condition = f"""
@@ -39,7 +40,7 @@ def copy_partition(table: str, source_schema: str, partition_field: str, last_di
     """
 
     sql = f"""
-    INSERT INTO {CATALOG}.{DEST_SCHEMA}.{table}
+    INSERT INTO {CATALOG}.{dest_schema}.{table}
     SELECT * FROM {CATALOG}.{source_schema}.{table}
     WHERE {condition}
     ORDER BY {partition_field}
@@ -47,10 +48,10 @@ def copy_partition(table: str, source_schema: str, partition_field: str, last_di
     hook.run(sql)
 
 @task
-def copy_full_table(table: str, source_schema: str):
+def copy_full_table(table: str, source_schema: str, dest_schema: str):
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
     sql = f"""
-    INSERT INTO {CATALOG}.{DEST_SCHEMA}.{table}
+    INSERT INTO {CATALOG}.{dest_schema}.{table}
     SELECT * FROM {CATALOG}.{source_schema}.{table}
     """
     hook.run(sql)
@@ -73,12 +74,12 @@ with DAG(
     }
 
     for table, (partition_field, source_schema) in partitioned_tables.items():
-        create = create_table_if_not_exists.override(task_id=f"create_{table}")(table, source_schema)
+        create = create_table_if_not_exists.override(task_id=f"create_{table}")(table, source_schema, DEST_SCHEMA)
 
         for digit in get_partitions_last_digit():
             with TaskGroup(group_id=f"{table}_partition_{digit}") as tg:
                 copy_task = copy_partition.override(task_id=f"copy_{table}_{digit}")(
-                    table, source_schema, partition_field, digit
+                    table, source_schema, DEST_SCHEMA, partition_field, digit
                 )
                 create >> copy_task  # đảm bảo task copy phụ thuộc vào task create
 
@@ -98,6 +99,6 @@ with DAG(
     ]
 
     for table, source_schema in no_partition_tables:
-        create = create_table_if_not_exists.override(task_id=f"create_{table}")(table, source_schema)
-        copy = copy_full_table.override(task_id=f"copy_{table}")(table, source_schema)
+        create = create_table_if_not_exists.override(task_id=f"create_{table}")(table, source_schema, VUNGDUNGCHUNG_DANHMUC)
+        copy = copy_full_table.override(task_id=f"copy_{table}")(table, source_schema, VUNGDUNGCHUNG_DANHMUC)
         create >> copy
