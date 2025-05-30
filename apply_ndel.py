@@ -101,7 +101,6 @@ with DAG(
     gen_task = PythonOperator(
         task_id="generate_batch_tasks",
         python_callable=generate_batch_tasks,
-        provide_context=True,
     )
 
     get_counts >> gen_task
