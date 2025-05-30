@@ -6,8 +6,10 @@ from datetime import datetime, timedelta
 from typing import List
 import logging
 
+# Thiết lập logger để ghi nhật ký chi tiết hơn
 log = logging.getLogger(__name__)
 
+# Định nghĩa các hằng số
 SOURCE_CONN_ID = "trino_default"
 CATALOG = "ndc"
 NDC_VUNGTAPKET_BCA = "ndc_vungtapket_bca"
@@ -16,11 +18,14 @@ NDA_VUNGTAPKET_DANHMUC = "ndc_vungtapket_danhmuc"
 DEST_SCHEMA_DAN_CU = "ndc_vungdungchung_dancu"
 DEST_SCHEMA_DANH_MUC = "ndc_vungdungchung_danhmuc"
 
+# Các đối số mặc định cho DAG
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     "retries": 2,
-    "retry_delay": timedelta(seconds=2), 
+    "retry_delay": timedelta(seconds=10), # Tăng thời gian chờ thử lại để ổn định hơn
+    "email_on_failure": False, # Có thể bật nếu bạn muốn nhận thông báo lỗi qua email
+    "email_on_retry": False,
 }
 
 def get_partitions_last_digit() -> List[str]:
@@ -53,17 +58,25 @@ def generate_merge_sql(hook: TrinoHook, source_schema: str, dest_schema: str, ta
     """
     columns = get_columns(hook, source_schema, table)
     
+    # Đảm bảo tất cả tên cột được trích dẫn đúng cách cho SQL
     escaped_columns = [f'"{col}"' for col in columns]
     
+    # Chuỗi các cột cho mệnh đề INSERT (tên cột đích)
     columns_str = ", ".join(escaped_columns)
     
+    # Chuỗi các giá trị cho mệnh đề INSERT (giá trị từ bảng nguồn)
     insert_values_str = ", ".join([f"source.{col}" for col in escaped_columns])
 
+    # Xây dựng mệnh đề UPDATE SET
+    # Chỉ bao gồm các cột không phải là khóa chính để cập nhật
+    # ĐÃ SỬA: Bỏ "target." khỏi tên cột trong mệnh đề SET
     updateable_columns = [col for col in escaped_columns if col.strip('"') != key]
-    update_set_clause = ", ".join([f'target.{col} = source.{col}' for col in updateable_columns])
+    update_set_clause = ", ".join([f'{col} = source.{col}' for col in updateable_columns])
 
+    # Xây dựng mệnh đề WHERE cho truy vấn con USING (nếu có điều kiện phân vùng)
     where_clause = f"WHERE {condition}" if condition else ""
 
+    # Bắt đầu xây dựng câu lệnh MERGE
     merge_sql_parts = [f"""
     MERGE INTO {CATALOG}.{dest_schema}.{table} AS target
     USING (
@@ -107,7 +120,7 @@ def create_table_if_not_exists(table_name: str, source_schema: str, dest_schema:
         log.info(f"Table {CATALOG}.{dest_schema}.{table_name} creation check completed successfully.")
     except Exception as e:
         log.error(f"Failed to create table {CATALOG}.{dest_schema}.{table_name}: {e}")
-        raise 
+        raise # Ném lại ngoại lệ để Airflow đánh dấu tác vụ là thất bại
 
 @task
 def merge_partition(table: str, source_schema: str, dest_schema: str, partition_field: str, last_digit: str, key: str):
@@ -141,29 +154,33 @@ def merge_full_table(table: str, source_schema: str, dest_schema: str, key: str)
         raise
 
 with DAG(
-    dag_id="trino_merge_all_tables_partitioned_v2", 
+    dag_id="trino_merge_all_tables_partitioned_v2", # Đổi ID DAG để tránh xung đột với phiên bản cũ
     default_args=default_args,
     start_date=datetime(2023, 1, 1),
     schedule=None,
     catchup=False,
-    max_active_tasks=10, 
+    max_active_tasks=10, # Số lượng tác vụ có thể chạy song song
     tags=["trino", "data-merge", "fix"]
 ) as dag:
 
-    # ======== Cấu hình BẢNG PHÂN MẢNH (Partitioned Tables) ========
+    # ======== Cấu hình BẢng PHÂN MẢNH (Partitioned Tables) ========
+    # Cấu trúc: {tên_bảng: (tên_trường_phân_mảnh, schema_nguồn, khóa_chính)}
     partitioned_tables = {
         "diachi": ("matinh", NDC_VUNGTAPKET_BCA, "madddiadiem"),
-        "giaytodinhdanhcn": ("sogiayto", NDC_VUNGTAPKET_BCA, "sogiayto"),
-        "nguoivn": ("sodinhdanh", NDC_VUNGTAPKET_BCA, "sodinhdanh"),
+        # "giaytodinhdanhcn": ("sogiayto", NDC_VUNGTAPKET_BCA, "sogiayto"),
+        # "nguoivn": ("sodinhdanh", NDC_VUNGTAPKET_BCA, "sodinhdanh"),
     }
 
     for table, (partition_field, source_schema, key) in partitioned_tables.items():
+        # Tạo tác vụ để đảm bảo bảng đích tồn tại trước khi đồng bộ
         create_task = create_table_if_not_exists.override(task_id=f"create_table_{table}")(
             table_name=table, source_schema=source_schema, dest_schema=DEST_SCHEMA_DAN_CU
         )
 
+        # Tạo một TaskGroup cho tất cả các phân vùng của một bảng
         with TaskGroup(group_id=f"{table}_sync_partitions") as tg_partitions:
             for digit in get_partitions_last_digit():
+                # Tạo tác vụ MERGE cho từng phân vùng
                 merge_task = merge_partition.override(task_id=f"merge_{table}_partition_{digit}")(
                     table=table,
                     source_schema=source_schema,
@@ -172,31 +189,36 @@ with DAG(
                     last_digit=digit,
                     key=key
                 )
+        # Thiết lập dependency: Tác vụ tạo bảng phải hoàn thành trước khi các tác vụ MERGE phân vùng bắt đầu
         create_task >> tg_partitions
 
-    # ======== Cấu hình BẢNG KHÔNG PHÂN MẢNH (Non-Partitioned Tables) ======== #
+    # ======== Cấu hình BẢNG KHÔNG PHÂN MẢNH (Non-Partitioned Tables) ========
+    # Cấu trúc: (tên_bảng, schema_nguồn, khóa_chính)
     no_partition_tables = [
         ("dm_dantoc", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_giatrithithuc", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_gioitinh", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_huyen", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_loaigiaytotuythan", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_loaigiaytoxnc", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_nhommau", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_quoctich", NDA_VUNGTAPKET_DANHMUC, "maquocgia"),
-        ("dm_tinh", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_tongiao", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_xa", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_giatrithithuc", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_gioitinh", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_huyen", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_loaigiaytotuythan", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_loaigiaytoxnc", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_nhommau", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_quoctich", NDA_VUNGTAPKET_DANHMUC, "maquocgia"),
+        # ("dm_tinh", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_tongiao", NDA_VUNGTAPKET_DANHMUC, "ma"),
+        # ("dm_xa", NDA_VUNGTAPKET_DANHMUC, "ma"),
     ]
 
     for table, source_schema, key in no_partition_tables:
+        # Tạo tác vụ để đảm bảo bảng đích tồn tại
         create_task = create_table_if_not_exists.override(task_id=f"create_table_{table}")(
             table_name=table, source_schema=source_schema, dest_schema=DEST_SCHEMA_DANH_MUC
         )
+        # Tạo tác vụ MERGE cho toàn bộ bảng
         merge_task = merge_full_table.override(task_id=f"merge_{table}")(
             table=table,
             source_schema=source_schema,
             dest_schema=DEST_SCHEMA_DANH_MUC,
             key=key
         )
+        # Thiết lập dependency
         create_task >> merge_task
