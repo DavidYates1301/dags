@@ -56,16 +56,16 @@ def sync_partition(table: str, source_schema: str, dest_schema: str, partition_f
         SELECT "{key}" FROM {CATALOG}.{dest_schema}.{table}
     )
     """
-    
-    # Update existing rows
+
+    # Update existing rows (Trino does not support alias in UPDATE)
     update_sql = f"""
-    UPDATE {CATALOG}.{dest_schema}.{table} AS target
+    UPDATE {CATALOG}.{dest_schema}.{table}
     SET {update_str}
     FROM (
         SELECT * FROM {CATALOG}.{source_schema}.{table}
         WHERE {condition}
     ) AS source
-    WHERE target."{key}" = source."{key}"
+    WHERE {CATALOG}.{dest_schema}.{table}."{key}" = source."{key}"
     """
 
     hook.run(update_sql)
@@ -88,10 +88,10 @@ def sync_full_table(table: str, source_schema: str, dest_schema: str, key: str):
     """
 
     update_sql = f"""
-    UPDATE {CATALOG}.{dest_schema}.{table} AS target
+    UPDATE {CATALOG}.{dest_schema}.{table}
     SET {update_str}
     FROM {CATALOG}.{source_schema}.{table} AS source
-    WHERE target."{key}" = source."{key}"
+    WHERE {CATALOG}.{dest_schema}.{table}."{key}" = source."{key}"
     """
 
     hook.run(update_sql)
