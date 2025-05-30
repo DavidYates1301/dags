@@ -48,9 +48,9 @@ def get_partition_batches():
     return task_inputs
 
 @task
-def copy_partition_batch(params):
-    loaigiayto_value = params["loaigiayto_value"]
-    offset = params["offset"]
+def copy_partition_batch(batch):
+    loaigiayto_value = batch["loaigiayto_value"]
+    offset = batch["offset"]
 
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
     sql = f"""
