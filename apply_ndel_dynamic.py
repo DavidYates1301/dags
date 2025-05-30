@@ -75,6 +75,6 @@ with DAG(
 
     create = create_destination_table()
     batches = get_partition_batches()
-    copy_tasks = copy_partition_batch.expand(params=batches)
+    copy_tasks = copy_partition_batch.expand(batch=batches)
 
     create >> batches >> copy_tasks
