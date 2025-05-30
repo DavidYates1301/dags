@@ -9,7 +9,7 @@ SOURCE_CONN_ID = "trino_default"
 CATALOG = "ndc"
 NDC_VUNGTAPKET_BCA = "ndc_vungtapket_bca"
 NDA_VUNGTAPKET_DANHMUC = "nda_vungtapket_danhmuc"
-DEST_SCHEMA = "destination"
+DEST_SCHEMA = "ndc_vungdungchung_dancu"
 
 default_args = {
     "owner": "airflow",
