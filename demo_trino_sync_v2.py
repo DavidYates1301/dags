@@ -42,7 +42,6 @@ def sync_partition(table: str, source_schema: str, dest_schema: str, partition_f
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
     columns = get_columns(hook, source_schema, table)
     columns_str = ", ".join(f'"{c}"' for c in columns)
-    update_str = ", ".join([f'"{col}" = source."{col}"' for col in columns if col != key])
 
     condition = f"substr(trim(cast({partition_field} as varchar)), -1) = '{last_digit}'"
 
@@ -56,17 +55,25 @@ def sync_partition(table: str, source_schema: str, dest_schema: str, partition_f
     )
     """
 
-    update_sql = f"""
-    UPDATE {CATALOG}.{dest_schema}.{table}
-    SET {update_str}
-    WHERE "{key}" IN (
-        SELECT "{key}"
-        FROM {CATALOG}.{source_schema}.{table}
-        WHERE {condition}
-    )
-    """
+    for col in columns:
+        if col == key:
+            continue
+        update_sql = f"""
+        UPDATE {CATALOG}.{dest_schema}.{table}
+        SET "{col}" = (
+            SELECT source."{col}"
+            FROM {CATALOG}.{source_schema}.{table} AS source
+            WHERE source."{key}" = {CATALOG}.{dest_schema}.{table}."{key}"
+            AND {condition}
+        )
+        WHERE "{key}" IN (
+            SELECT "{key}"
+            FROM {CATALOG}.{source_schema}.{table}
+            WHERE {condition}
+        )
+        """
+        hook.run(update_sql)
 
-    hook.run(update_sql)
     hook.run(insert_sql)
 
 @task
@@ -74,7 +81,6 @@ def sync_full_table(table: str, source_schema: str, dest_schema: str, key: str):
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
     columns = get_columns(hook, source_schema, table)
     columns_str = ", ".join(f'"{c}"' for c in columns)
-    update_str = ", ".join([f'"{col}" = source."{col}"' for col in columns if col != key])
 
     insert_sql = f"""
     INSERT INTO {CATALOG}.{dest_schema}.{table}
@@ -85,16 +91,23 @@ def sync_full_table(table: str, source_schema: str, dest_schema: str, key: str):
     )
     """
 
-    update_sql = f"""
-    UPDATE {CATALOG}.{dest_schema}.{table}
-    SET {update_str}
-    WHERE "{key}" IN (
-        SELECT "{key}"
-        FROM {CATALOG}.{source_schema}.{table}
-    )
-    """
+    for col in columns:
+        if col == key:
+            continue
+        update_sql = f"""
+        UPDATE {CATALOG}.{dest_schema}.{table}
+        SET "{col}" = (
+            SELECT source."{col}"
+            FROM {CATALOG}.{source_schema}.{table} AS source
+            WHERE source."{key}" = {CATALOG}.{dest_schema}.{table}."{key}"
+        )
+        WHERE "{key}" IN (
+            SELECT "{key}"
+            FROM {CATALOG}.{source_schema}.{table}
+        )
+        """
+        hook.run(update_sql)
 
-    hook.run(update_sql)
     hook.run(insert_sql)
 
 def get_partitions_last_digit() -> List[str]:
@@ -111,10 +124,10 @@ with DAG(
 ) as dag:
 
     # ======== BẢNG PHÂN MẢNH ========
-    partitioned_tables = {
+    # partitioned_tables = {
         "diachi": ("matinh", NDC_VUNGTAPKET_BCA, "madddiadiem"),
-        # "giaytodinhdanhcn": ("sogiayto", NDC_VUNGTAPKET_BCA, "sogiayto"),
-        # "nguoivn": ("sodinhdanh", NDC_VUNGTAPKET_BCA, "sodinhdanh"),
+    #     "giaytodinhdanhcn": ("sogiayto", NDC_VUNGTAPKET_BCA, "sogiayto"),
+    #     "nguoivn": ("sodinhdanh", NDC_VUNGTAPKET_BCA, "sodinhdanh"),
     }
 
     for table, (partition_field, source_schema, key) in partitioned_tables.items():
