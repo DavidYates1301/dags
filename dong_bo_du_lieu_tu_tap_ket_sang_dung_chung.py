@@ -2,12 +2,14 @@ from airflow import DAG
 from airflow.providers.trino.hooks.trino import TrinoHook
 from airflow.decorators import task
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Set
 
 SOURCE_CONN_ID = "trino_default"
 CATALOG = "ndc"
+
 NDC_VUNGTAPKET_BCA = "ndc-khotapket-bca"
 NDA_VUNGTAPKET_DANHMUC = "ndc-khotapket-danhmuc"
+
 DEST_SCHEMA = "ndc-khodieuphoi-dancu"
 VUNGDUNGCHUNG_DANHMUC = "ndc-khodieuphoi-danhmuc"
 
@@ -39,12 +41,18 @@ def generate_merge_sql(hook: TrinoHook, source_schema: str, dest_schema: str, ta
     return f"""
     MERGE INTO {CATALOG}."{dest_schema}"."{table}" AS target
     USING (
-         {CATALOG}."{source_schema}"."{table}" {where_clause}
+         SELECT * FROM {CATALOG}."{source_schema}"."{table}" {where_clause}
     ) AS source
     ON target."{key}" = source."{key}"
     WHEN MATCHED THEN UPDATE SET {update_set}
     WHEN NOT MATCHED THEN INSERT ({columns_str}) VALUES ({insert_values})
     """
+
+@task
+def create_schema_if_not_exists(schema_name: str):
+    hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
+    sql = f'CREATE SCHEMA IF NOT EXISTS {CATALOG}."{schema_name}"'
+    hook.run(sql)
 
 @task
 def create_table_if_not_exists(table_name: str, source_schema: str, dest_schema: str):
@@ -88,7 +96,14 @@ with DAG(
         ("dm_xa", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma"),
     ]
 
+    dest_schemas: Set[str] = set([dest for _, _, dest, _ in all_tables])
+    schema_tasks = {}
+
+    for schema in dest_schemas:
+        schema_tasks[schema] = create_schema_if_not_exists.override(task_id=f"tao_schema_{schema}")(schema)
+
     for table, source_schema, dest_schema, key in all_tables:
-        create = create_table_if_not_exists.override(task_id=f"tao_bang_{table}")(table, source_schema, dest_schema)
-        merge = merge_full_table.override(task_id=f"dong_bo_{table}")(table, source_schema, dest_schema, key)
-        create >> merge
+        create_table = create_table_if_not_exists.override(task_id=f"tao_bang_{table}")(table, source_schema, dest_schema)
+        merge_table = merge_full_table.override(task_id=f"dong_bo_{table}")(table, source_schema, dest_schema, key)
+
+        schema_tasks[dest_schema] >> create_table >> merge_table
