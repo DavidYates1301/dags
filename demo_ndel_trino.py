@@ -104,8 +104,9 @@ with DAG(
 
     trigger_trino_dag = TriggerDagRunOperator(
         task_id='trigger_trino_copy_all_tables_partitioned',
-        trigger_dag_id='trino_copy_all_tables_partitioned',  
-        wait_for_completion=True,  
+        # trigger_dag_id='trino_copy_all_tables_partitioned',  
+        trigger_dag_id='trino_merge_all_tables_partitioned_v2',
+        wait_for_completion=False,  
         reset_dag_run=True,         
     )
 
