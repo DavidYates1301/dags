@@ -8,11 +8,15 @@ from datetime import datetime, timedelta
 from typing import List
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
+default_args = {
+    "owner": "nd",
+    "depends_on_past": False,
+}
 
 with DAG(
     dag_id='dong_bo_du_lieu_ndel_v1',
     start_date=datetime(2023, 1, 1),
-    owner="nd",
+    default_args=default_args,
     schedule=None,  
     catchup=False
 ) as dag:
