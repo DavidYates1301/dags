@@ -35,12 +35,8 @@ def get_columns(hook: TrinoHook, schema: str, table: str) -> List[str]:
     WHERE table_schema = '{schema}' AND table_name = '{table}'
     ORDER BY ordinal_position
     """
-    log.info(f"Fetching columns for {CATALOG}.{schema}.{table}")
     results = hook.get_records(sql)
     columns = [row[0] for row in results]
-    if not columns:
-        log.warning(f"No columns found for table {CATALOG}.{schema}.{table}. This might indicate a table does not exist or has no defined columns.")
-    log.info(f"Columns for {schema}.{table}: {columns}")
     return columns
 
 def generate_delete_insert_sqls(hook: TrinoHook, source_schema: str, dest_schema: str, table: str, key: str, condition: str = None) -> (str, str):
@@ -69,8 +65,6 @@ def generate_delete_insert_sqls(hook: TrinoHook, source_schema: str, dest_schema
     {where_clause}
     """
     
-    log.info(f"Generated DELETE SQL for {table} (partition: {condition if condition else 'full'}): \n{delete_sql}")
-    log.info(f"Generated INSERT SQL for {table} (partition: {condition if condition else 'full'}): \n{insert_sql}")
     
     return delete_sql, insert_sql
 
@@ -81,12 +75,9 @@ def create_table_if_not_exists(table_name: str, source_schema: str, dest_schema:
     CREATE TABLE IF NOT EXISTS {CATALOG}.{dest_schema}.{table_name} AS
     SELECT * FROM {CATALOG}.{source_schema}.{table_name} WHERE 1=0
     """
-    log.info(f"Attempting to create table {CATALOG}.{dest_schema}.{table_name} if not exists.")
     try:
         hook.run(sql)
-        log.info(f"Table {CATALOG}.{dest_schema}.{table_name} creation check completed successfully.")
     except Exception as e:
-        log.error(f"Failed to create table {CATALOG}.{dest_schema}.{table_name}: {e}")
         raise 
 
 @task
@@ -96,35 +87,25 @@ def sync_partition_delete_insert(table: str, source_schema: str, dest_schema: st
     """
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
     condition = f"substr(trim(cast({partition_field} as varchar)), -1) = '{last_digit}'"
-    log.info(f"Starting sync (DELETE+INSERT) for partitioned table {table}, partition {last_digit}.")
     
     delete_sql, insert_sql = generate_delete_insert_sqls(hook, source_schema, dest_schema, table, key, condition)
     
     try:
-        log.info(f"Executing DELETE for {table}, partition {last_digit}.")
         hook.run(delete_sql)
-        log.info(f"Executing INSERT for {table}, partition {last_digit}.")
         hook.run(insert_sql)
-        log.info(f"Sync (DELETE+INSERT) completed for partitioned table {table}, partition {last_digit}.")
     except Exception as e:
-        log.error(f"Failed to sync partition {last_digit} for table {table} using DELETE+INSERT: {e}")
         raise
 
 @task
 def sync_full_table_delete_insert(table: str, source_schema: str, dest_schema: str, key: str):
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
-    log.info(f"Starting full sync (DELETE+INSERT) for table {table}.")
     
     delete_sql, insert_sql = generate_delete_insert_sqls(hook, source_schema, dest_schema, table, key)
     
     try:
-        log.info(f"Executing DELETE for full table {table}.")
         hook.run(delete_sql)
-        log.info(f"Executing INSERT for full table {table}.")
         hook.run(insert_sql)
-        log.info(f"Full sync (DELETE+INSERT) completed for table {table}.")
     except Exception as e:
-        log.error(f"Failed to sync full table {table} using DELETE+INSERT: {e}")
         raise
 
 with DAG(
