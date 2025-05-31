@@ -39,7 +39,7 @@ def generate_merge_sql(hook: TrinoHook, source_schema: str, dest_schema: str, ta
     return f"""
     MERGE INTO {CATALOG}."{dest_schema}"."{table}" AS target
     USING (
-        SELECT * FROM {CATALOG}."{source_schema}"."{table}" {where_clause}
+         {CATALOG}."{source_schema}"."{table}" {where_clause}
     ) AS source
     ON target."{key}" = source."{key}"
     WHEN MATCHED THEN UPDATE SET {update_set}
