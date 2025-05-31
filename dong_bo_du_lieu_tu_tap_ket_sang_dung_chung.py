@@ -13,7 +13,7 @@ DEST_SCHEMA = "ndc-khodieuphoi-dancu"
 VUNGDUNGCHUNG_DANHMUC = "ndc-khodieuphoi-danhmuc"
 
 default_args = {
-    "owner": "nd",
+    "owner": "ND",
     "depends_on_past": False,
     "retries": 2,
     "retry_delay": timedelta(seconds=10),
