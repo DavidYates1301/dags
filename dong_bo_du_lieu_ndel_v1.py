@@ -12,6 +12,7 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 with DAG(
     dag_id='dong_bo_du_lieu_ndel_v1',
     start_date=datetime(2023, 1, 1),
+    owner="nd",
     schedule=None,  
     catchup=False
 ) as dag:
