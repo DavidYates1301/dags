@@ -1,7 +1,6 @@
 from airflow import DAG
 from airflow.providers.trino.hooks.trino import TrinoHook
 from airflow.decorators import task
-from airflow.utils.task_group import TaskGroup
 from datetime import datetime, timedelta
 from typing import List
 
@@ -18,9 +17,6 @@ default_args = {
     "retries": 2,
     "retry_delay": timedelta(seconds=10),
 }
-
-def get_partitions_last_digit() -> List[str]:
-    return [str(i) for i in range(10)]
 
 def get_columns(hook: TrinoHook, schema: str, table: str) -> List[str]:
     sql = f"""
@@ -60,13 +56,6 @@ def create_table_if_not_exists(table_name: str, source_schema: str, dest_schema:
     hook.run(sql)
 
 @task
-def merge_partition(table: str, source_schema: str, dest_schema: str, partition_field: str, last_digit: str, key: str):
-    hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
-    condition = f"substr(trim(cast({partition_field} as varchar)), -1) = '{last_digit}'"
-    sql = generate_merge_sql(hook, source_schema, dest_schema, table, key, condition)
-    hook.run(sql)
-
-@task
 def merge_full_table(table: str, source_schema: str, dest_schema: str, key: str):
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
     sql = generate_merge_sql(hook, source_schema, dest_schema, table, key)
@@ -82,37 +71,24 @@ with DAG(
     tags=["trino", "data-merge"]
 ) as dag:
 
-    partitioned_tables = {
-        "diachi": ("matinh", NDC_VUNGTAPKET_BCA, "madddiadiem"),
-        "giaytodinhdanhcn": ("sogiayto", NDC_VUNGTAPKET_BCA, "sogiayto"),
-        "nguoivn": ("sodinhdanh", NDC_VUNGTAPKET_BCA, "sodinhdanh"),
-    }
-
-    for table, (partition_field, source_schema, key) in partitioned_tables.items():
-        create = create_table_if_not_exists.override(task_id=f"tao_bang_{table}")(table, source_schema, DEST_SCHEMA)
-
-        for digit in get_partitions_last_digit():
-            with TaskGroup(group_id=f"{table}_partition_{digit}") as tg:
-                merge_task = merge_partition.override(task_id=f"dong_bo_{table}_{digit}")(
-                    table, source_schema, DEST_SCHEMA, partition_field, digit, key
-                )
-                create >> merge_task
-
-    no_partition_tables = [
-        ("dm_dantoc", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_giatrithithuc", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_gioitinh", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_huyen", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_loaigiaytotuythan", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_loaigiaytoxnc", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_nhommau", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_quoctich", NDA_VUNGTAPKET_DANHMUC, "maquocgia"),
-        ("dm_tinh", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_tongiao", NDA_VUNGTAPKET_DANHMUC, "ma"),
-        ("dm_xa", NDA_VUNGTAPKET_DANHMUC, "ma"),
+    all_tables = [
+        ("diachi", NDC_VUNGTAPKET_BCA, DEST_SCHEMA, "madddiadiem"),
+        ("giaytodinhdanhcn", NDC_VUNGTAPKET_BCA, DEST_SCHEMA, "sogiayto"),
+        ("nguoivn", NDC_VUNGTAPKET_BCA, DEST_SCHEMA, "sodinhdanh"),
+        ("dm_dantoc", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma"),
+        ("dm_giatrithithuc", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma"),
+        ("dm_gioitinh", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma"),
+        ("dm_huyen", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma"),
+        ("dm_loaigiaytotuythan", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma"),
+        ("dm_loaigiaytoxnc", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma"),
+        ("dm_nhommau", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma"),
+        ("dm_quoctich", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "maquocgia"),
+        ("dm_tinh", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma"),
+        ("dm_tongiao", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma"),
+        ("dm_xa", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma"),
     ]
 
-    for table, source_schema, key in no_partition_tables:
-        create = create_table_if_not_exists.override(task_id=f"tao_bang_{table}")(table, source_schema, VUNGDUNGCHUNG_DANHMUC)
-        merge = merge_full_table.override(task_id=f"dong_bo_{table}")(table, source_schema, VUNGDUNGCHUNG_DANHMUC, key)
+    for table, source_schema, dest_schema, key in all_tables:
+        create = create_table_if_not_exists.override(task_id=f"tao_bang_{table}")(table, source_schema, dest_schema)
+        merge = merge_full_table.override(task_id=f"dong_bo_{table}")(table, source_schema, dest_schema, key)
         create >> merge
