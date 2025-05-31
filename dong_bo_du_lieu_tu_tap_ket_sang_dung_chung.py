@@ -89,11 +89,11 @@ with DAG(
     }
 
     for table, (partition_field, source_schema, key) in partitioned_tables.items():
-        create = create_table_if_not_exists.override(task_id=f"create_{table}")(table, source_schema, DEST_SCHEMA)
+        create = create_table_if_not_exists.override(task_id=f"tao_bang_{table}")(table, source_schema, DEST_SCHEMA)
 
         for digit in get_partitions_last_digit():
             with TaskGroup(group_id=f"{table}_partition_{digit}") as tg:
-                merge_task = merge_partition.override(task_id=f"merge_{table}_{digit}")(
+                merge_task = merge_partition.override(task_id=f"dong_bo_{table}_{digit}")(
                     table, source_schema, DEST_SCHEMA, partition_field, digit, key
                 )
                 create >> merge_task
@@ -113,6 +113,6 @@ with DAG(
     ]
 
     for table, source_schema, key in no_partition_tables:
-        create = create_table_if_not_exists.override(task_id=f"create_{table}")(table, source_schema, VUNGDUNGCHUNG_DANHMUC)
-        merge = merge_full_table.override(task_id=f"merge_{table}")(table, source_schema, VUNGDUNGCHUNG_DANHMUC, key)
+        create = create_table_if_not_exists.override(task_id=f"tao_bang_{table}")(table, source_schema, VUNGDUNGCHUNG_DANHMUC)
+        merge = merge_full_table.override(task_id=f"dong_bo_{table}")(table, source_schema, VUNGDUNGCHUNG_DANHMUC, key)
         create >> merge
