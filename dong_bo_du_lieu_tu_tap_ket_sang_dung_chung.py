@@ -7,10 +7,10 @@ from typing import List
 
 SOURCE_CONN_ID = "trino_default"
 CATALOG = "ndc"
-NDC_VUNGTAPKET_BCA = "ndc_vungtapket_bca"
-NDA_VUNGTAPKET_DANHMUC = "ndc_vungtapket_danhmuc"
-DEST_SCHEMA = "ndc_vungdungchung_dancu"
-VUNGDUNGCHUNG_DANHMUC = "ndc_vungdungchung_danhmuc"
+NDC_VUNGTAPKET_BCA = "ndc_khotapket_bca"
+NDA_VUNGTAPKET_DANHMUC = "ndc_khotapket_danhmuc"
+DEST_SCHEMA = "ndc_khodieuphoi_dancu"
+VUNGDUNGCHUNG_DANHMUC = "ndc_khodieuphoi_danhmuc"
 
 default_args = {
     "owner": "nd",
