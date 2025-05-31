@@ -25,7 +25,7 @@ def get_partitions_last_digit() -> List[str]:
 def get_columns(hook: TrinoHook, schema: str, table: str) -> List[str]:
     sql = f"""
     SELECT column_name
-    FROM {CATALOG}.information_schema.columns
+    FROM '{CATALOG}'.information_schema.columns
     WHERE table_schema = '{schema}' AND table_name = '{table}'
     ORDER BY ordinal_position
     """
@@ -41,9 +41,9 @@ def generate_merge_sql(hook: TrinoHook, source_schema: str, dest_schema: str, ta
     where_clause = f"WHERE {condition}" if condition else ""
 
     return f"""
-    MERGE INTO {CATALOG}.{dest_schema}.{table} AS target
+    MERGE INTO '{CATALOG}'.'{dest_schema}'.'{table}' AS target
     USING (
-        SELECT * FROM {CATALOG}.{source_schema}.{table} {where_clause}
+        SELECT * FROM '{CATALOG}'.'{source_schema}'.'{table}' {where_clause}
     ) AS source
     ON target."{key}" = source."{key}"
     WHEN MATCHED THEN UPDATE SET {update_set}
@@ -54,8 +54,8 @@ def generate_merge_sql(hook: TrinoHook, source_schema: str, dest_schema: str, ta
 def create_table_if_not_exists(table_name: str, source_schema: str, dest_schema: str):
     hook = TrinoHook(trino_conn_id=SOURCE_CONN_ID)
     sql = f"""
-    CREATE TABLE IF NOT EXISTS {CATALOG}.{dest_schema}.{table_name} AS
-    SELECT * FROM {CATALOG}.{source_schema}.{table_name} WHERE 1=0
+    CREATE TABLE IF NOT EXISTS '{CATALOG}'.'{dest_schema}'.'{table_name}' AS
+    SELECT * FROM '{CATALOG}'.'{source_schema}'.'{table_name}' WHERE 1=0
     """
     hook.run(sql)
 
