@@ -207,7 +207,7 @@ with DAG(
         [trigger_sync_task2, create_schema_bhxh] >> create_table
         with TaskGroup(group_id=f"dong_bo_du_lieu_{table}") as tg:
             for digit in get_partitions_last_digit():
-                merge_task = merge_partition.override(task_id=f"dong_bo_{table}_{digit}")(
+                merge_task = merge_partition.override(task_id=f"dong_bo_tham_gia_bao_hiem_bang_{table}_partition_{digit}")(
                     table=table, source_schema=source_schema, dest_schema=dest_schema, partition_field=key, last_digit=digit, key=key
                 )
                 create_table >> merge_task
@@ -220,7 +220,7 @@ with DAG(
         [trigger_sync_task3, create_schema_bhxh] >> create_table
         with TaskGroup(group_id=f"dong_bo_du_lieu_{table}") as tg:
             for digit in get_partitions_last_digit():
-                merge_task = merge_partition.override(task_id=f"dong_bo_{table}_{digit}")(
+                merge_task = merge_partition.override(task_id=f"dong_bo_chi_tra_bang_{table}_partition_{digit}")(
                     table=table, source_schema=source_schema, dest_schema=dest_schema, partition_field=key, last_digit=digit, key=key
                 )
                 create_table >> merge_task
@@ -232,7 +232,7 @@ with DAG(
         [trigger_sync_task4, create_schema_bhxh] >> create_table
         with TaskGroup(group_id=f"dong_bo_du_lieu_{table}") as tg:
             for digit in get_partitions_last_digit():
-                merge_task = merge_partition.override(task_id=f"dong_bo_{table}_{digit}")(
+                merge_task = merge_partition.override(task_id=f"dong_bo_huong_bao_hiem_bang_{table}_partition_{digit}")(
                     table=table, source_schema=source_schema, dest_schema=dest_schema, partition_field=key, last_digit=digit, key=key
                 )
                 create_table >> merge_task
@@ -243,7 +243,7 @@ with DAG(
         [trigger_sync_task5, create_schema_bhxh] >> create_table
         with TaskGroup(group_id=f"dong_bo_du_lieu_{table}") as tg:
             for digit in get_partitions_last_digit():
-                merge_task = merge_partition.override(task_id=f"dong_bo_{table}_{digit}")(
+                merge_task = merge_partition.override(task_id=f"dong_bo_nguoi_tham_gia_bao_hiem_bang_{table}_partition_{digit}")(
                     table=table, source_schema=source_schema, dest_schema=dest_schema, partition_field=key, last_digit=digit, key=key
                 )
                 create_table >> merge_task
