@@ -197,8 +197,8 @@ with DAG(
     
     
     trigger_sync_task1 >> [trigger_sync_task2, create_schema_danhmuc]
-    trigger_sync_task2 >> [trigger_sync_task3, create_schema_bhxh] >> trigger_sync_task4 >> trigger_sync_task5
-
+    trigger_sync_task2 >> [trigger_sync_task3, create_schema_bhxh] 
+    create_schema_bhxh >> trigger_sync_task4 >> trigger_sync_task5
 
 
 
@@ -256,7 +256,7 @@ with DAG(
         create_table = create_table_if_not_exists.override(task_id=f"tao_bang_{table}")(table, source_schema, dest_schema)
         merge_table = merge_full_table.override(task_id=f"dong_bo_{table}")(table, source_schema, dest_schema, key)
 
-        [trigger_sync_task1, create_schema_danhmuc] >> create_table >> merge_table
+        create_schema_danhmuc >> create_table >> merge_table
 
     # for table, source_schema, dest_schema, key in chi_tra_tables:
     #     create_table = create_table_if_not_exists.override(task_id=f"tao_bang_{table}")(table, source_schema, dest_schema)
