@@ -133,7 +133,7 @@ with DAG(
         ("dm_xa", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma", []),
     ]
 
-    dest_schemas: Set[str] = set([dest for _, _, dest, _ in all_tables])
+    dest_schemas: Set[str] = set([dest for _, _, dest, _, _ in all_tables])
     schema_tasks = {}
 
     for schema in dest_schemas:
