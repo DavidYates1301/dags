@@ -116,7 +116,7 @@ with DAG(
     dm_tables = [
         ("dm_chedohuong", NDC_KHO_TAP_KET_DANHMUC, KHODIEUPHOI_DANHMUC, "ma"),
         ("dm_chuongbenh", NDC_KHO_TAP_KET_DANHMUC, KHODIEUPHOI_DANHMUC, "ma"),
-        ("dm_loai_benh", NDC_KHO_TAP_KET_DANHMUC, KHODIEUPHOI_DANHMUC, "mabenh"),
+        ("dm_loaibenh", NDC_KHO_TAP_KET_DANHMUC, KHODIEUPHOI_DANHMUC, "mabenh"),
         ("dm_loaidoituongbhyt", NDC_KHO_TAP_KET_DANHMUC, KHODIEUPHOI_DANHMUC, "ma"),
         ("dm_cosokhamchuabenh", NDC_KHO_TAP_KET_DANHMUC, KHODIEUPHOI_DANHMUC, "ma"),
         ("dm_hinhthucthamgia", NDC_KHO_TAP_KET_DANHMUC, KHODIEUPHOI_DANHMUC, "ma"),
@@ -125,13 +125,15 @@ with DAG(
         ("dm_maloaibenh", NDC_KHO_TAP_KET_DANHMUC, KHODIEUPHOI_DANHMUC, "ma"),
         ("dm_mamuchuongbhyt", NDC_KHO_TAP_KET_DANHMUC, KHODIEUPHOI_DANHMUC,"ma"),
         ("dm_nhombenh", NDC_KHO_TAP_KET_DANHMUC, KHODIEUPHOI_DANHMUC, "ma"),
-        ("dm_phuongthucdong", NDC_KHO_TAP_KET_DANHMUC, KHODIEUPHOI_DANHMUC, "ma")
+        ("dm_phuongthucdong", NDC_KHO_TAP_KET_DANHMUC, KHODIEUPHOI_DANHMUC, "ma"),
+        ("dm_trangthaihd", NDC_KHO_TAP_KET_DANHMUC, KHODIEUPHOI_DANHMUC, "ma") 
     ]
 
     tham_gia_bao_hiem_tables = [
         ("thamgiabhtn", NDC_KHOTAPKET_BHXH, KHODIEUPHOIBHXH, "sodinhdanh"),
         ("thamgiabhxh", NDC_KHOTAPKET_BHXH, KHODIEUPHOIBHXH, "sodinhdanh"),
         ("thamgiabhyt", NDC_KHOTAPKET_BHXH, KHODIEUPHOIBHXH, "mathe"),
+        ("toroibhtn", NDC_KHOTAPKET_BHXH, KHODIEUPHOIBHXH, "idtoroi"),
     ]
 
     chi_tra_tables = [
