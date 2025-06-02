@@ -117,9 +117,9 @@ with DAG(
 ) as dag:
 
     all_tables = [
-        ("diachi", NDC_VUNGTAPKET_BCA, DEST_SCHEMA, "madddiadiem", ["bucket(madddiadiem, 16)"]),
-        ("giaytodinhdanhcn", NDC_VUNGTAPKET_BCA, DEST_SCHEMA, "sogiayto", ["bucket(sogiayto, 16)", "loaigiayto"]),
-        ("nguoivn", NDC_VUNGTAPKET_BCA, DEST_SCHEMA, "sodinhdanh", ["bucket(sodinhdanh, 16)", "trangthai", "gioitinh"]),
+        ("diachi", NDC_VUNGTAPKET_BCA, DEST_SCHEMA, "madddiadiem", ["bucket(madddiadiem, 100)"]),
+        ("giaytodinhdanhcn", NDC_VUNGTAPKET_BCA, DEST_SCHEMA, "sogiayto", ["bucket(sogiayto, 100)", "loaigiayto"]),
+        ("nguoivn", NDC_VUNGTAPKET_BCA, DEST_SCHEMA, "sodinhdanh", ["bucket(sodinhdanh, 10)", "trangthai", "gioitinh"]),
         ("dm_dantoc", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma", []),
         ("dm_giatrithithuc", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma", []),
         ("dm_gioitinh", NDA_VUNGTAPKET_DANHMUC, VUNGDUNGCHUNG_DANHMUC, "ma", []),
