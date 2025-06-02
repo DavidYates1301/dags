@@ -10,8 +10,8 @@ CATALOG = "ndc"
 NDC_VUNGTAPKET_BCA = "ndc-khotapket-bca"
 NDA_VUNGTAPKET_DANHMUC = "ndc-khotapket-danhmuc"
 
-DEST_SCHEMA = "ndc-khodieuphoi-dancu-pa"
-VUNGDUNGCHUNG_DANHMUC = "ndc-khodieuphoi-danhmuc-pa"
+DEST_SCHEMA = "ndc-khodieuphoi-dancu"
+VUNGDUNGCHUNG_DANHMUC = "ndc-khodieuphoi-danhmuc"
 
 default_args = {
     "owner": "ND",
