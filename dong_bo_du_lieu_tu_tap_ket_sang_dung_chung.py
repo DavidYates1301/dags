@@ -14,7 +14,7 @@ DEST_SCHEMA = "ndc-khodieuphoi-dancu"
 VUNGDUNGCHUNG_DANHMUC = "ndc-khodieuphoi-danhmuc"
 
 default_args = {
-    "owner": "ND",
+    "owner": "NDC",
     "depends_on_past": False,
     "retries": 2,
     "retry_delay": timedelta(seconds=10),
@@ -30,8 +30,12 @@ def get_columns(hook: TrinoHook, schema: str, table: str) -> List[str]:
     results = hook.get_records(sql)
     return [row[0] for row in results]
 
+def get_columns_without_airbyte_field(hook: TrinoHook, schema: str, table: str):
+    columns = get_columns(hook, schema, table)
+    return [c for c in columns if not c.startswith("_")]
+
 def generate_merge_sql(hook: TrinoHook, source_schema: str, dest_schema: str, table: str, key: str, condition: str = None) -> str:
-    columns = get_columns(hook, source_schema, table)
+    columns = get_columns_without_airbyte_field(hook, source_schema, table)
     escaped_columns = [f'"{col}"' for col in columns]
     columns_str = ", ".join(escaped_columns)
     update_set = ", ".join([f'{col} = source.{col}' for col in escaped_columns if col.strip('"') != key])
@@ -71,12 +75,13 @@ def merge_full_table(table: str, source_schema: str, dest_schema: str, key: str)
 
 with DAG(
     dag_id="dong_bo_du_lieu_tu_tap_ket_sang_dung_chung",
+    description="Đồng bộ dữ liệu Dân cư: Kho tập kết -> Kho điều phối",
     default_args=default_args,
     start_date=datetime(2023, 1, 1),
     schedule=None,
     catchup=False,
     max_active_tasks=4,
-    tags=["trino", "data-merge"]
+    tags=["dan-cu"]
 ) as dag:
 
     all_tables = [
